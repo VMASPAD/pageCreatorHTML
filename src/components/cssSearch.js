@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { html, render } from 'lit-html'
 import { styleMap } from 'lit-html/directives/style-map.js'
 
@@ -40,16 +41,20 @@ export default (editor, opts = {}) => {
     ...opts
   }
 
-  function update(show, filter = '') {
-    options.enablePerformance ?? console.time('update')
-    options.enablePerformance ?? console.time('all-comps')
+  async function update(show, filter = '') {
+    options.enablePerformance && console.time('update')
+    options.enablePerformance && console.time('all-comps')
+  
     const gjsProjectStr = localStorage.getItem('gjsProject')
     const gjsProject = gjsProjectStr ? JSON.parse(gjsProjectStr) : { styles: [] }
-    const selectorNames = gjsProject.styles
-      .flatMap((style) => style.selectors.map((selector) => selector))
-      .filter((selector) => typeof selector === 'string') // Ajusta si el nombre del selector está en una propiedad específica
-
-    console.log(selectorNames)
+  
+    // Ejecuta la obtención de selectorNames en segundo plano
+    const selectorNamesPromise = Promise.all(
+      gjsProject.styles
+        .flatMap((style) => style.selectors.map((selector) => selector))
+        .filter((selector) => typeof selector === 'string') // Ajusta si el nombre del selector está en una propiedad específica
+    )
+  
     // Get all the website components
     // Or [] if !options.enableCount
     const allComps = []
@@ -58,48 +63,59 @@ export default (editor, opts = {}) => {
         page.getMainComponent().onAll((comp) => allComps.push(comp))
       })
     }
-    options.enablePerformance ?? console.timeEnd('all-comps')
+    options.enablePerformance && console.timeEnd('all-comps')
     const startWord = 'gjs-cv-unscale'
     const endWord = 'sp-choose'
-
+  
     let foundStart = false
-    const selectors = sm.getAll().filter((sel) => {
-      if (sel.getLabel() === startWord) {
-        foundStart = true;
-        return false;
-      }
-
-      if (foundStart && sel.getLabel() === endWord) {
-        foundStart = false;
-        return false;
-      }
-
-      return (
-        !foundStart &&
-        !sel.private &&
-        !sm.getSelected().includes(sel) &&
-        (sel.getLabel().toLowerCase().includes(filter.toLowerCase()) || filter === '')
-      );
+    const selectorsPromise = Promise.all(
+      sm.getAll().filter((sel) => {
+        if (sel.getLabel() === startWord) {
+          foundStart = true;
+          return false;
+        }
+  
+        if (foundStart && sel.getLabel() === endWord) {
+          foundStart = false;
+          return false;
+        }
+  
+        return (
+          !foundStart &&
+          !sel.private &&
+          !sm.getSelected().includes(sel) &&
+          (sel.getLabel().toLowerCase().includes(filter.toLowerCase()) || filter === '')
+        );
+      })
+    )
+  
+    // Espera a que las promesas se resuelvan antes de continuar
+    const [selectorNames, selectors] = await Promise.all([selectorNamesPromise, selectorsPromise])
+  
+    console.log(selectorNames)
+    console.log(selectors)
+  
+// Primero, crea un objeto para almacenar los conteos de las clases
+let classCounts = {};
+allComps.forEach(comp => {
+  if (comp && typeof comp.getClasses === 'function') {
+    comp.getClasses().forEach(className => {
+      classCounts[className] = (classCounts[className] || 0) + 1;
     });
+  }
+});
 
+// Luego, cuando mapeas los selectores, puedes obtener el conteo de la clase directamente del objeto
+const tags = options.enableCount
+  ? selectors
+      .map(sel => ({
+        sel,
+        count: classCounts[sel.id] || 0
+      }))
+      .sort((first, second) => second.count - first.count)
+      .filter(({ sel, count }) => count > -1)
+  : selectors.map(sel => ({ sel, count: 0 }));
 
-    // Add the usage count
-    // Modifica la sección donde se cuenta el uso de clases
-    const tags = options.enableCount
-      ? selectors
-          .map((sel) => ({
-            sel,
-            count: allComps.reduce(
-              (num, comp) =>
-                comp && typeof comp.getClasses === 'function' && comp.getClasses().includes(sel.id)
-                  ? num + 1
-                  : num,
-              0
-            )
-          }))
-          .sort((first, second) => second.count - first.count)
-          .filter(({ sel, count }) => count > -1)
-      : selectors.map((sel) => ({ sel, count: 0 }))
 
     console.log(selectors)
     // Render the UI
@@ -155,9 +171,21 @@ export default (editor, opts = {}) => {
     styleEl.innerHTML = options.containerStyle + options.tagStyle
     document.head.appendChild(styleEl)
     // bind to events
-    input.addEventListener('blur', () => update(false))
-    input.addEventListener('focus', () => update(true, input.value))
-    editor.on('selector', () => update(false))
-    input.addEventListener('keyup', () => update(true, input.value))
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+    input.addEventListener('keyup', debounce(() => update(true, input.value), 750));
+    
+    input.addEventListener('blur',  debounce(() => update(false), 750))
+    input.addEventListener('focus',  debounce(() => update(true, input.value), 750))
+    
   })
-}
+} 

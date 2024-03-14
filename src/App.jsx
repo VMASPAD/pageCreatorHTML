@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import 'grapesjs/dist/css/grapes.min.css'
 import grapesjs from 'grapesjs'
 import React, { useEffect } from 'react'
@@ -17,10 +18,10 @@ function App() {
       fromElement: true,
       plugins: [plugin, classUI, manager, blocks, customCodePlugin, pluginExport],
       storageManager: {
-        type: 'local', // Storage type. Available: local | remote
-        autosave: true, // Store data automatically
-        autoload: true, // Autoload stored data on init
-        stepsBeforeSave: 1 // If autosave
+        type: 'local',
+        autosave: true,
+        autoload: true,
+        stepsBeforeSave: 1 
       },
       // Avoid any default panel
       panels: { defaults: [] },
