@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.gjs-two-color {
+  color: #ffffff !important;
+}
+.gjs-one-bg {
+  background-color: #73939c !important;
+}
+.gjs-four-color {
+  color: #000000 !important;
+}
+.add-page {
+  background: #ffffff !important;
+  color: #000000;
+}
+.page.selected {
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  background-color: #73939c;
+}
+.gjs-selected {
+  outline: 2px solid #323e41 !important;
+  outline-offset: -2px;
+}
+
+body{
+  margin: 0;
+}
