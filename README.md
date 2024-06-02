@@ -1,5 +1,3 @@
-Sure, here's a README for the main code of a page builder application using GrapesJS, in English:
-
 # Web Page Builder with GrapesJS
 
 This project is a React application that utilizes the GrapesJS library to provide a visual drag-and-drop editor for creating web pages. GrapesJS is a modern website builder that combines reusable blocks, drag-and-drop design, and a powerful inline styling system.
